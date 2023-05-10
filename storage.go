@@ -120,16 +120,16 @@ func (s *Storage) DelTask(taskID int) (int, error) {
 	return id, err
 }
 
-func (s *Storage) Labels(label string) ([]Task, error) {
+func (s *Storage) Labels(labelID int) ([]Task, error) {
 	rows, err := s.db.Query(context.Background(), `
 	SELECT tasks.*, string_agg(labels.name_text, ',') AS labels
 	FROM tasks
 		LEFT JOIN tasks_labels ON tasks.id = tasks_labels.task_id
 		LEFT JOIN labels ON label.id = tasks_labels.label_id
-	WHERE tasks_labels.color_id=$1
+	WHERE tasks_labels.label_id=$1
 	GROUP BY tasks.id;
 	`,
-		label,
+		labelID,
 	)
 	if err != nil {
 		return nil, err
