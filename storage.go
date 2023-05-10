@@ -94,3 +94,62 @@ func (s *Storage) NewTask(t Task) (int, error) {
 	).Scan(&id)
 	return id, err
 }
+
+func (s *Storage) UpTask(taskID int, title string, content string) (int, error) {
+	var id int
+	err := s.db.QueryRow(context.Background(), `
+		UPDATE tasks
+		SET title = $2 AND content =$3
+		WHERE ID = $1;
+		`,
+		taskID,
+		title,
+		content,
+	).Scan(&id)
+	return id, err
+}
+
+func (s *Storage) DelTask(taskID int) (int, error) {
+	var id int
+	err := s.db.QueryRow(context.Background(), `
+		DELETE FROM tasks
+		WHERE ID = $1;
+		`,
+		taskID,
+	).Scan(&id)
+	return id, err
+}
+
+func (s *Storage) Labels(label string) ([]Task, error) {
+	rows, err := s.db.Query(context.Background(), `
+	SELECT tasks.*, string_agg(labels.name_text, ',') AS labels
+	FROM tasks
+		LEFT JOIN tasks_labels ON tasks.id = tasks_labels.task_id
+		LEFT JOIN labels ON label.id = tasks_labels.label_id
+	WHERE tasks_labels.color_id=$1
+	GROUP BY tasks.id;
+	`,
+		label,
+	)
+	if err != nil {
+		return nil, err
+	}
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		err = rows.Scan(
+			&t.ID,
+			&t.Opened,
+			&t.Closed,
+			&t.AuthorID,
+			&t.AssignedID,
+			&t.Title,
+			&t.Content,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks, rows.Err()
+}
